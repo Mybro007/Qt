@@ -20,6 +20,8 @@ public:
     void resume();
     double getTime() const;
     bool isRunning() const;
+    double getLapTime();
+    void lastLapTimeUpdate();
 
 signals:
     void timeUpdated(double time);
@@ -29,9 +31,10 @@ private slots:
 
 private:
     QTimer *timer;
-    QTime *elapsedTime;
+    double elapsedMilliseconds;
     bool running;
     double pausedTime;
+    double lastLapTime;
 };
 
 class MainWindow : public QMainWindow
