@@ -40,10 +40,6 @@ void MainWindow::StartRace(void){
         countFinish = 0;
         number = 0;
 
-        // Создаем QFutureWatcher для отслеживания завершения обоих потоков
-        QFutureWatcher<void> watcher1;
-        QFutureWatcher<void> watcher2;
-
         // Создаем два потока, которые будут инкрементировать значение
         QFuture<void> future1 = QtConcurrent::run([=]() {
             concurRace1->DoWork(&number, ui->rb_mutexOn->isChecked(), ui->sb_initNum->value());
@@ -53,28 +49,9 @@ void MainWindow::StartRace(void){
             concurRace2->DoWork(&number, ui->rb_mutexOn->isChecked(), ui->sb_initNum->value());
         });
 
-        // Подключаем сигнал завершения для обоих потоков
-        connect(&watcher1, &QFutureWatcher<void>::finished, this, [&]() {
-            countFinish++;
-            if (countFinish == 2) {
-                ui->te_debug->append("Искомое число равно: " + QString::number(number) + ", а должно быть " +
-                                     QString::number(ui->sb_initNum->value() * 2));
-                ui->pb_start->setEnabled(true);
-            }
-        });
-
-        connect(&watcher2, &QFutureWatcher<void>::finished, this, [&]() {
-            countFinish++;
-            if (countFinish == 2) {
-                ui->te_debug->append("Искомое число равно: " + QString::number(number) + ", а должно быть " +
-                                     QString::number(ui->sb_initNum->value() * 2));
-                ui->pb_start->setEnabled(true);
-            }
-        });
-
-        // Привязываем QFutureWatcher к нашим потокам
-        watcher1.setFuture(future1);
-        watcher2.setFuture(future2);
+        // Ожидаем завершения обоих потоков
+        future1.waitForFinished();
+        future2.waitForFinished();
 
     }
     else{
