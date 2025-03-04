@@ -44,13 +44,11 @@ void MainWindow::StartRace(void){
         QFuture<void> future1 = QtConcurrent::run([=]() {
             concurRace1->DoWork(&number, ui->rb_mutexOn->isChecked(), ui->sb_initNum->value());
         });
+        future1.waitForFinished();
 
         QFuture<void> future2 = QtConcurrent::run([=]() {
             concurRace2->DoWork(&number, ui->rb_mutexOn->isChecked(), ui->sb_initNum->value());
         });
-
-        // Ожидаем завершения обоих потоков
-        future1.waitForFinished();
         future2.waitForFinished();
 
     }
