@@ -51,7 +51,9 @@ private:
     Ui::MainWindow *ui;
     QString pathToFile = "";
     uint8_t numberSelectChannel = 0xEA;
-
+    QChart* chart;
+    QLineSeries* series;
+    QChartView* chartView;
     QVector<uint32_t> readData;
     QVector<double> procesData;
     QVector<double> mins, maxs;
