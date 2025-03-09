@@ -6,7 +6,8 @@
 #include <QtConcurrent>
 #include "database.h"
 #include "dbdata.h"
-
+#include <QSqlTableModel>
+#include <QSqlQueryModel>
 
 
 QT_BEGIN_NAMESPACE
@@ -23,7 +24,7 @@ public:
 
 
 public slots:
-    void ScreenDataFromDB(const QTableWidget *widget, int typeRequest);
+    void ScreenDataFromDB(QTableWidget *widget, int typeRequest);
     void ReceiveStatusConnectionToDB(bool status);
 
 

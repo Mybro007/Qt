@@ -3,7 +3,9 @@
 
 #include <QTableWidget>
 #include <QObject>
-
+#include <QSqlDatabase>
+#include <QSqlError>
+#include <QSqlQueryModel>
 
 
 #define POSTGRE_DRIVER "QPSQL"
@@ -49,7 +51,7 @@ public:
 
 signals:
 
-   void sig_SendDataFromDB(const QTableWidget *tableWg, int typeR);
+   void sig_SendDataFromDB(QTableWidget *tableWg, int typeR);
    void sig_SendStatusConnection(bool);
 
 

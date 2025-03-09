@@ -101,27 +101,31 @@ void MainWindow::on_pb_request_clicked()
 {
     // Очищаем таблицу перед загрузкой новых данных
     ui->tb_result->clearContents();
-    ui->tb_result->setRowCount(0);
+    ui->tb_result->setRowCount(0);  // Убираем все строки, чтобы не было остатков от предыдущего запроса
 
     if (ui->cb_category->currentText() == "Все") {
-        // Получаем все фильмы через QSqlTableModel
+        // Запрос для получения всех фильмов через QSqlTableModel
         QSqlTableModel* model = new QSqlTableModel(this);
         model->setTable("film");
         model->setEditStrategy(QSqlTableModel::OnManualSubmit);
         model->select();
 
-        // Добавляем данные в таблицу
-        for (int i = 0; i < model->rowCount(); ++i) {
-            ui->tb_result->insertRow(i);  // Добавляем строку
-            ui->tb_result->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));  // Название фильма
-            ui->tb_result->setItem(i, 1, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));  // Описание фильма
-        }
+        if (model->rowCount() > 0) {
+            // Заполняем таблицу данными
+            for (int i = 0; i < model->rowCount(); ++i) {
+                ui->tb_result->insertRow(i);  // Добавляем строку
+                ui->tb_result->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));  // Название фильма
+                ui->tb_result->setItem(i, 1, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));  // Описание фильма
+            }
 
-        // Заголовки столбцов
-        ui->tb_result->setHorizontalHeaderLabels({"Название фильма", "Описание фильма"});
+            // Устанавливаем заголовки столбцов
+            ui->tb_result->setHorizontalHeaderLabels({"Название фильма", "Описание фильма"});
+        } else {
+            qDebug() << "Нет данных для отображения в категории 'Все'.";
+        }
     }
     else if (ui->cb_category->currentText() == "Комедия" || ui->cb_category->currentText() == "Ужасы") {
-        // Получаем фильмы по категориям через QSqlQueryModel
+        // Запрос для получения фильмов по категории через QSqlQueryModel
         QString category = ui->cb_category->currentText();
         QSqlQueryModel* model = new QSqlQueryModel(this);
         QString queryStr = QString(
@@ -133,17 +137,23 @@ void MainWindow::on_pb_request_clicked()
 
         model->setQuery(queryStr);
 
-        // Добавляем данные в таблицу
-        for (int i = 0; i < model->rowCount(); ++i) {
-            ui->tb_result->insertRow(i);  // Добавляем строку
-            ui->tb_result->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));  // Название фильма
-            ui->tb_result->setItem(i, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));  // Описание фильма
-        }
+        if (model->rowCount() > 0) {
+            // Заполняем таблицу данными
+            for (int i = 0; i < model->rowCount(); ++i) {
+                ui->tb_result->insertRow(i);  // Добавляем строку
+                ui->tb_result->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));  // Название фильма
+                ui->tb_result->setItem(i, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));  // Описание фильма
+            }
 
-        // Заголовки столбцов
-        ui->tb_result->setHorizontalHeaderLabels({"Название фильма", "Описание фильма"});
+            // Устанавливаем заголовки столбцов
+            ui->tb_result->setHorizontalHeaderLabels({"Название фильма", "Описание фильма"});
+        } else {
+            qDebug() << "Нет данных для отображения в категории '" << category << "'.";
+        }
     }
 }
+
+
 void MainWindow::on_pb_clear_clicked()
 {
     ui->tb_result->clearContents(); // Очистить содержимое
@@ -155,13 +165,57 @@ void MainWindow::on_pb_clear_clicked()
  * \param widget
  * \param typeRequest
  */
-void MainWindow::ScreenDataFromDB(const QTableWidget *widget, int typeRequest)
+
+void MainWindow::ScreenDataFromDB(QTableWidget* widget, int typeRequest)
 {
+    // Очистим таблицу
+    ui->tb_result->clearContents();
+    ui->tb_result->setRowCount(0);
 
-        ///Тут должен быть код ДЗ
+    if (typeRequest == requestAllFilms) {
+        // Для всех фильмов, получаем их через QSqlTableModel
+        QSqlTableModel* model = new QSqlTableModel(this);
+        model->setTable("film");
+        model->setEditStrategy(QSqlTableModel::OnManualSubmit);
+        model->select();
 
+        // Заполняем таблицу данными
+        for (int i = 0; i < model->rowCount(); ++i) {
+            widget->insertRow(i);  // Добавляем строку
+            widget->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));  // Название фильма
+            widget->setItem(i, 1, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));  // Описание фильма
+        }
 
+        // Заголовки столбцов
+        widget->setHorizontalHeaderLabels({"Название фильма", "Описание фильма"});
+    }
+    else if (typeRequest == requestComedy || typeRequest == requestHorrors) {
+        // Для фильмов по категориям (комедия или ужасы) через QSqlQueryModel
+        QSqlQueryModel* model = new QSqlQueryModel(this);
+        QString category = (typeRequest == requestComedy) ? "Comedy" : "Horror";
+        QString queryStr = QString(
+                               "SELECT f.title, f.description "
+                               "FROM film f "
+                               "JOIN film_category fc ON f.film_id = fc.film_id "
+                               "JOIN category c ON c.category_id = fc.category_id "
+                               "WHERE c.name = '%1'").arg(category);
+
+        model->setQuery(queryStr);
+
+        // Заполняем таблицу данными
+        for (int i = 0; i < model->rowCount(); ++i) {
+            widget->insertRow(i);  // Добавляем строку
+            widget->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));  // Название фильма
+            widget->setItem(i, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));  // Описание фильма
+        }
+
+        // Заголовки столбцов
+        widget->setHorizontalHeaderLabels({"Название фильма", "Описание фильма"});
+    }
 }
+
+
+
 /*!
  * \brief Метод изменяет стотояние формы в зависимости от статуса подключения к БД
  * \param status

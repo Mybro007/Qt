@@ -67,11 +67,39 @@ void DataBase::DisconnectFromDataBase(QString nameDb)
  */
 void DataBase::RequestToDB(QString request)
 {
+    QTableWidget* tableWidget = new QTableWidget();  // Создаем виджет таблицы
+
+    // Выполняем запрос
     QSqlQueryModel* model = new QSqlQueryModel();
     model->setQuery(request);
 
-    emit sig_SendDataFromDB(model);  // Отправляем данные обратно в главное окно
+    // Подключаем данные из модели в таблицу
+    tableWidget->setRowCount(model->rowCount());
+    tableWidget->setColumnCount(model->columnCount());
+
+    // Переносим данные из модели в таблицу
+    for (int row = 0; row < model->rowCount(); ++row) {
+        for (int col = 0; col < model->columnCount(); ++col) {
+            tableWidget->setItem(row, col, new QTableWidgetItem(model->data(model->index(row, col)).toString()));
+        }
+    }
+
+    // Отправляем сигнал с таблицей и типом запроса
+    requestType typeRequest;
+    if (request.contains("film")) {
+        typeRequest = requestAllFilms;
+    } else if (request.contains("Comedy")) {
+        typeRequest = requestComedy;
+    } else if (request.contains("Horror")) {
+        typeRequest = requestHorrors;
+    } else {
+        typeRequest = requestAllFilms;  // Если запрос не попадает в другие категории
+    }
+
+    emit sig_SendDataFromDB(tableWidget, typeRequest);  // Передаем таблицу и тип запроса
 }
+
+
 
 /*!
  * @brief Метод возвращает последнюю ошибку БД
