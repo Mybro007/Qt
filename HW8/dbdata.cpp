@@ -8,6 +8,12 @@ DbData::DbData(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    // Устанавливаем захардкоженные данные в поля
+    ui->le_host->setText("981757-ca08998.tmweb.ru");  // hostName
+    ui->le_dbName->setText("netology_cpp");            // dbName
+    ui->le_login->setText("netology_usr_cpp");         // login
+    ui->le_pass->setText("CppNeto3");                  // pass
+    ui->spB_port->setValue(5432);                      // port
 
     //Ресайзим вектор значений, по количеству полей необходимых для
     //подключения к БД

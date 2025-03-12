@@ -33,6 +33,14 @@ void DataBase::AddDataBase(QString driver, QString nameDB)
  */
 void DataBase::ConnectToDataBase(QVector<QString> data)
 {
+    // Если данные для подключения не переданы, используем захардкоженные значения
+    if (data.isEmpty()) {
+        data.push_back("981757-ca08998.tmweb.ru");  // hostName
+        data.push_back("netology_cpp");              // dbName
+        data.push_back("netology_usr_cpp");          // login
+        data.push_back("CppNeto3");                  // pass
+        data.push_back("5432");                      // port
+    }
 
     dataBase->setHostName(data[hostName]);
     dataBase->setDatabaseName(data[dbName]);
@@ -40,14 +48,9 @@ void DataBase::ConnectToDataBase(QVector<QString> data)
     dataBase->setPassword(data[pass]);
     dataBase->setPort(data[port].toInt());
 
-
-    ///Тут должен быть код ДЗ
-
-
     bool status;
-    status = dataBase->open( );
+    status = dataBase->open();
     emit sig_SendStatusConnection(status);
-
 }
 /*!
  * \brief Метод производит отключение от БД

@@ -79,9 +79,12 @@ void MainWindow::on_act_connect_triggered()
         ui->lb_statusConnect->setText("Подключение");
         ui->lb_statusConnect->setStyleSheet("color : black");
 
-
-        auto conn = [&]{dataBase->ConnectToDataBase(dataForConnect);};
-        QtConcurrent::run(conn);
+        // Лямбда-функция для подключения
+        auto conn = [&]{
+            // Подключаемся с захардкоженными данными
+            dataBase->ConnectToDataBase(dataForConnect);
+        };
+        QtConcurrent::run(conn);  // Выполняем подключение в отдельном потоке
 
     }
     else{
@@ -91,7 +94,6 @@ void MainWindow::on_act_connect_triggered()
         ui->lb_statusConnect->setStyleSheet("color:red");
         ui->pb_request->setEnabled(false);
     }
-
 }
 
 /*!
