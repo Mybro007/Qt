@@ -78,11 +78,11 @@ void DataBase::RequestToDB(QString request)
 
     // Подключаем данные из модели в таблицу
     tableWidget->setRowCount(model->rowCount());
-    tableWidget->setColumnCount(model->columnCount());
+    tableWidget->setColumnCount(2);  // Устанавливаем только два столбца
 
     // Переносим данные из модели в таблицу
     for (int row = 0; row < model->rowCount(); ++row) {
-        for (int col = 0; col < model->columnCount(); ++col) {
+        for (int col = 0; col < 2; ++col) {  // Обрабатываем только два столбца
             tableWidget->setItem(row, col, new QTableWidgetItem(model->data(model->index(row, col)).toString()));
         }
     }

@@ -21,12 +21,15 @@ MainWindow::MainWindow(QWidget *parent)
     // Таймер для отправки датаграмм с интервалом
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, [&]{
+        // Отправка времени каждую секунду
         QDateTime dateTime = QDateTime::currentDateTime();
 
         QByteArray dataToSend;
         QDataStream outStr(&dataToSend, QIODevice::WriteOnly);
-
         outStr << dateTime;
+
+        // Логирование отправляемых данных
+        qDebug() << "Отправка времени:" << dateTime.toString();
 
         udpWorker->SendDatagram(dataToSend);
         timer->start(TIMER_DELAY);
@@ -40,6 +43,8 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_pb_start_clicked()
 {
+    // При нажатии на "Start" начинается отправка времени
+    qDebug() << "Запуск таймера для отправки времени";
     timer->start(TIMER_DELAY);
 }
 
@@ -50,12 +55,17 @@ void MainWindow::DisplayTime(QDateTime data)
         ui->te_result->clear();
     }
 
-    ui->te_result->append("Текущее время: " + data.toString() + ". "
-                                                                            "Принято пакетов " + QString::number(counterPck));
+    // Логирование времени
+    qDebug() << "Получено время:" << data.toString();
+
+    // Отображаем только время, без информации о размере
+    ui->te_result->append("Текущее время: " + data.toString() + ". Принято пакетов " + QString::number(counterPck));
 }
 
 void MainWindow::on_pb_stop_clicked()
 {
+    // Останавливаем таймер
+    qDebug() << "Остановка таймера";
     timer->stop();
 }
 
@@ -74,17 +84,24 @@ void MainWindow::onSendDatagramClicked()
     // Преобразуем текст в QByteArray
     QByteArray dataToSend = text.toUtf8();
 
+    // Логирование отправленных данных
+    qDebug() << "Отправка текста:" << text;
+
     // Отправляем данные
     udpWorker->SendDatagram(dataToSend);
 
-    // Отображаем отправленный текст в консоли
-    ui->te_result->append("Отправлена датаграмма: " + text);
+    // Отображаем информацию о количестве отправленных байт
+    ui->te_result->append(QString("Отправлена датаграмма: %1, размер: %2 байт")
+                              .arg(text).arg(dataToSend.size()));
 }
 
 // Новый слот для отображения информации о принятом сообщении
 void MainWindow::DisplayReceivedData(QString senderAddress, int messageSize)
 {
-    QString message = QString("Принято сообщение от адреса %1, размер сообщения (байт): %2")
-                          .arg(senderAddress).arg(messageSize);
-    ui->te_result->append(message);
+    // Логирование принятого пакета
+    qDebug() << "Принято сообщение от адреса" << senderAddress << "размер сообщения" << messageSize << "байт";
+
+    // Выводим только информацию о принятом сообщении с размером
+    ui->te_result->append(QString("Принято сообщение от адреса %1, размер сообщения (байт): %2")
+                              .arg(senderAddress).arg(messageSize));
 }

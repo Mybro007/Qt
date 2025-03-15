@@ -17,25 +17,42 @@ void UDPworker::ReadDatagram(QNetworkDatagram datagram)
 {
     QByteArray data = datagram.data();
 
-    // Отправляем принятые данные в GUI
-    QString receivedMessage = QString::fromUtf8(data);
-    QString senderAddress = datagram.senderAddress().toString();
-    int messageSize = data.size();
+    // Логирование размера принятого пакета
+    qDebug() << "Принят пакет, размер:" << data.size() << "байт";
 
-    emit sig_sendTimeToGUI(QDateTime::currentDateTime());
+    // Попытка десериализации данных в QDateTime
+    QDataStream inStr(&data, QIODevice::ReadOnly);
 
-    // Отображаем информацию о принятом сообщении
-    emit sig_sendReceivedData(senderAddress, messageSize);
+    // Попробуем прочитать QDateTime из потока
+    QDateTime receivedTime;
+    inStr >> receivedTime;
+
+    if (receivedTime.isValid()) {
+        // Если мы успешно получили QDateTime, значит это переданное время
+        qDebug() << "Принято время:" << receivedTime.toString();
+        emit sig_sendTimeToGUI(receivedTime);
+    } else {
+        // Если это не время, передаем информацию о размере и адресе отправителя
+        QString senderAddress = datagram.senderAddress().toString();
+        int messageSize = data.size();
+
+        // Логирование информации о принятом сообщении
+        qDebug() << "Принято сообщение от адреса" << senderAddress << "размер сообщения" << messageSize << "байт";
+        emit sig_sendReceivedData(senderAddress, messageSize);
+    }
 }
 
 void UDPworker::SendDatagram(QByteArray data)
 {
+    // Логирование отправляемых данных
+    qDebug() << "Отправка данных, размер:" << data.size() << "байт";
+
     serviceUdpSocket->writeDatagram(data, QHostAddress::LocalHost, BIND_PORT);
 }
 
 void UDPworker::readPendingDatagrams()
 {
-    while(serviceUdpSocket->hasPendingDatagrams()){
+    while (serviceUdpSocket->hasPendingDatagrams()) {
         QNetworkDatagram datagram = serviceUdpSocket->receiveDatagram();
         ReadDatagram(datagram);
     }

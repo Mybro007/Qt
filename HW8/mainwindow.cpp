@@ -171,8 +171,8 @@ void MainWindow::on_pb_clear_clicked()
 void MainWindow::ScreenDataFromDB(QTableWidget* widget, int typeRequest)
 {
     // Очистим таблицу
-    ui->tb_result->clearContents();
-    ui->tb_result->setRowCount(0);
+    widget->clearContents();
+    widget->setRowCount(0);
 
     if (typeRequest == requestAllFilms) {
         // Для всех фильмов, получаем их через QSqlTableModel
@@ -181,7 +181,7 @@ void MainWindow::ScreenDataFromDB(QTableWidget* widget, int typeRequest)
         model->setEditStrategy(QSqlTableModel::OnManualSubmit);
         model->select();
 
-        // Заполняем таблицу данными
+        // Заполняем таблицу данными (оставляем только два столбца)
         for (int i = 0; i < model->rowCount(); ++i) {
             widget->insertRow(i);  // Добавляем строку
             widget->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));  // Название фильма
@@ -204,7 +204,7 @@ void MainWindow::ScreenDataFromDB(QTableWidget* widget, int typeRequest)
 
         model->setQuery(queryStr);
 
-        // Заполняем таблицу данными
+        // Заполняем таблицу данными (оставляем только два столбца)
         for (int i = 0; i < model->rowCount(); ++i) {
             widget->insertRow(i);  // Добавляем строку
             widget->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));  // Название фильма
