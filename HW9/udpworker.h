@@ -5,7 +5,7 @@
 #include <QNetworkDatagram>
 #include <QDateTime>
 
-#define BIND_PORT 12345
+#define PORT 12345
 
 class UDPworker : public QObject
 {

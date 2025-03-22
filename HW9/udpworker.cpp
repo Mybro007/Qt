@@ -8,7 +8,7 @@ void UDPworker::InitSocket()
 {
     serviceUdpSocket = new QUdpSocket(this);
 
-    serviceUdpSocket->bind(QHostAddress::LocalHost, BIND_PORT);
+    serviceUdpSocket->bind(QHostAddress::LocalHost, PORT);
 
     connect(serviceUdpSocket, &QUdpSocket::readyRead, this, &UDPworker::readPendingDatagrams);
 }
@@ -20,34 +20,50 @@ void UDPworker::ReadDatagram(QNetworkDatagram datagram)
     // Логирование размера принятого пакета
     qDebug() << "Принят пакет, размер:" << data.size() << "байт";
 
-    // Попытка десериализации данных в QDateTime
+    // Создаем поток для десериализации
     QDataStream inStr(&data, QIODevice::ReadOnly);
 
-    // Попробуем прочитать QDateTime из потока
-    QDateTime receivedTime;
-    inStr >> receivedTime;
+    // Читаем маркер (тип данных)
+    QByteArray dataType;
+    inStr >> dataType;
 
-    if (receivedTime.isValid()) {
-        // Если мы успешно получили QDateTime, значит это переданное время
-        qDebug() << "Принято время:" << receivedTime.toString();
-        emit sig_sendTimeToGUI(receivedTime);
-    } else {
-        // Если это не время, передаем информацию о размере и адресе отправителя
+    // Проверяем маркер и интерпретируем данные в зависимости от типа
+    if (dataType == QByteArray("T")) {
+        // Это маркер времени, читаем QDateTime
+        QDateTime receivedTime;
+        inStr >> receivedTime;
+
+        if (receivedTime.isValid()) {
+            qDebug() << "Принято время:" << receivedTime.toString();
+            emit sig_sendTimeToGUI(receivedTime);
+        } else {
+            qDebug() << "Не удалось интерпретировать как время";
+        }
+    } else if (dataType == QByteArray("S")) {
+        // Это маркер строки, читаем строку
+        QString receivedText;
+        inStr >> receivedText;
+
+        qDebug() << "Принято текстовое сообщение:" << receivedText;
+
+        // Логируем информацию о принятом сообщении
         QString senderAddress = datagram.senderAddress().toString();
         int messageSize = data.size();
-
-        // Логирование информации о принятом сообщении
-        qDebug() << "Принято сообщение от адреса" << senderAddress << "размер сообщения" << messageSize << "байт";
         emit sig_sendReceivedData(senderAddress, messageSize);
+    } else {
+        // Неверный маркер данных
+        qDebug() << "Неизвестный тип данных";
     }
 }
+
+
 
 void UDPworker::SendDatagram(QByteArray data)
 {
     // Логирование отправляемых данных
     qDebug() << "Отправка данных, размер:" << data.size() << "байт";
 
-    serviceUdpSocket->writeDatagram(data, QHostAddress::LocalHost, BIND_PORT);
+    serviceUdpSocket->writeDatagram(data, QHostAddress::LocalHost, PORT);
 }
 
 void UDPworker::readPendingDatagrams()

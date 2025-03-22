@@ -24,14 +24,15 @@ MainWindow::MainWindow(QWidget *parent)
         // Отправка времени каждую секунду
         QDateTime dateTime = QDateTime::currentDateTime();
 
-        QByteArray dataToSend;
-        QDataStream outStr(&dataToSend, QIODevice::WriteOnly);
+        QByteArray timeToSend;
+        QDataStream outStr(&timeToSend, QIODevice::WriteOnly);
+        outStr << QByteArray("T");  // Маркер времени
         outStr << dateTime;
 
         // Логирование отправляемых данных
         qDebug() << "Отправка времени:" << dateTime.toString();
 
-        udpWorker->SendDatagram(dataToSend);
+        udpWorker->SendDatagram(timeToSend);
         timer->start(TIMER_DELAY);
     });
 }
@@ -81,11 +82,16 @@ void MainWindow::onSendDatagramClicked()
         return;
     }
 
-    // Преобразуем текст в QByteArray
-    QByteArray dataToSend = text.toUtf8();
+    // Создаем маркер для передачи
+    QByteArray dataToSend;
+    QDataStream outStr(&dataToSend, QIODevice::WriteOnly);
 
-    // Логирование отправленных данных
-    qDebug() << "Отправка текста:" << text;
+    // Отправляем текст
+    outStr << QByteArray("S");  // Маркер строки
+    outStr << text;
+
+    // Логируем отправленные данные
+    qDebug() << "Отправка данных:" << dataToSend;
 
     // Отправляем данные
     udpWorker->SendDatagram(dataToSend);

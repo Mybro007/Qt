@@ -6,15 +6,15 @@
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQueryModel>
-
+#include <QSqlTableModel>
 
 #define POSTGRE_DRIVER "QPSQL"
 #define DB_NAME "MyDB"
 
-//Количество полей данных необходимых для подключения к БД
+// Количество полей данных необходимых для подключения к БД
 #define NUM_DATA_FOR_CONNECT_TO_DB 5
 
-//Перечисление полей данных
+// Перечисление полей данных
 enum fieldsForConnect{
     hostName = 0,
     dbName = 1,
@@ -23,16 +23,12 @@ enum fieldsForConnect{
     port = 4
 };
 
-//Типы запросов
+// Типы запросов
 enum requestType{
-
     requestAllFilms = 1,
     requestComedy   = 2,
     requestHorrors  = 3
-
 };
-
-
 
 class DataBase : public QObject
 {
@@ -48,19 +44,15 @@ public:
     QSqlError GetLastError(void);
     void ConnectToDataBase(QVector<QString> dataForConnect);
 
+    // Возвращаем экземпляр QSqlDatabase
+    QSqlDatabase getDatabase() const { return *dataBase; }
 
 signals:
-
-   void sig_SendDataFromDB(QTableWidget *tableWg, int typeR);
-   void sig_SendStatusConnection(bool);
-
-
+    void sig_SendDataFromDB(QTableWidget *tableWg, int typeR);
+    void sig_SendStatusConnection(bool);
 
 private:
-
     QSqlDatabase* dataBase;
-
-
 };
 
 #endif // DATABASE_H
