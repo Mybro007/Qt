@@ -1,9 +1,8 @@
 #include "database.h"
 
 DataBase::DataBase(QObject *parent)
-    : QObject{parent}
+    : QObject{parent}, dataBase(new QSqlDatabase())
 {
-    dataBase = new QSqlDatabase();
 }
 
 DataBase::~DataBase()
@@ -32,7 +31,13 @@ void DataBase::ConnectToDataBase(QVector<QString> data)
     dataBase->setPassword(data[pass]);
     dataBase->setPort(data[port].toInt());
 
-    bool status = dataBase->open();
+    bool status = dataBase->open();  // Попытка открыть базу данных
+
+    if (!status) {
+        // Если не удалось открыть базу данных, выведите ошибку
+        qWarning() << "Failed to connect to the database:" << dataBase->lastError().text();
+    }
+
     emit sig_SendStatusConnection(status);
 }
 
@@ -45,4 +50,9 @@ void DataBase::DisconnectFromDataBase(QString nameDb)
 QSqlError DataBase::GetLastError()
 {
     return dataBase->lastError();
+}
+
+QSqlDatabase DataBase::getDatabase() const
+{
+    return *dataBase;
 }

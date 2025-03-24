@@ -75,29 +75,38 @@ void MainWindow::on_act_connect_triggered()
 
 void MainWindow::on_pb_request_clicked()
 {
-    ui->tb_result->clearContents();
-    ui->tb_result->setRowCount(0);
+    ui->tb_result->clearContents();  // Очистить содержимое
+    ui->tb_result->setRowCount(0);   // Удалить все строки
+
+    // Проверяем, что база данных открыта
+    if (!dataBase->getDatabase().isOpen()) {
+        qWarning() << "Database is not open. Cannot execute the query.";
+        return;
+    }
 
     if (ui->cb_category->currentText() == "Все") {
         QSqlTableModel* model = new QSqlTableModel(this);
-        model->setTable("film");
-        model->setEditStrategy(QSqlTableModel::OnManualSubmit);
+        model->setTable("film"); // Используем таблицу "film"
+        model->setEditStrategy(QSqlTableModel::OnManualSubmit);  // Стратегия редактирования
+        model->setQuery("SELECT title, description FROM film");  // Запрос для всех фильмов
 
-        // Связываем с базой данных через глобальное подключение
-        model->setQuery("SELECT title, description FROM film");  // Выполнение запроса
+        // Установим заголовки столбцов
+        model->setHeaderData(0, Qt::Horizontal, "Название фильма");
+        model->setHeaderData(1, Qt::Horizontal, "Описание фильма");
 
+        // Связываем модель с таблицей на форме
         if (model->rowCount() > 0) {
+            ui->tb_result->setRowCount(model->rowCount());
             for (int i = 0; i < model->rowCount(); ++i) {
-                ui->tb_result->insertRow(i);
-                ui->tb_result->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));  // Название фильма
-                ui->tb_result->setItem(i, 1, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));  // Описание фильма
+                ui->tb_result->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));  // Название фильма
+                ui->tb_result->setItem(i, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));  // Описание фильма
             }
-            ui->tb_result->setHorizontalHeaderLabels({"Название фильма", "Описание фильма"});
         }
     }
     else if (ui->cb_category->currentText() == "Комедия" || ui->cb_category->currentText() == "Ужасы") {
         QString category = ui->cb_category->currentText();
         QSqlQueryModel* model = new QSqlQueryModel(this);
+
         QString queryStr = QString(
                                "SELECT f.title, f.description "
                                "FROM film f "
@@ -105,18 +114,23 @@ void MainWindow::on_pb_request_clicked()
                                "JOIN category c ON c.category_id = fc.category_id "
                                "WHERE c.name = '%1'").arg(category);
 
-        model->setQuery(queryStr);  // Выполнение запроса
+        model->setQuery(queryStr);  // Запрос для категории (комедия или ужасы)
 
+        // Установим заголовки столбцов
+        model->setHeaderData(0, Qt::Horizontal, "Название фильма");
+        model->setHeaderData(1, Qt::Horizontal, "Описание фильма");
+
+        // Связываем модель с таблицей на форме
         if (model->rowCount() > 0) {
+            ui->tb_result->setRowCount(model->rowCount());
             for (int i = 0; i < model->rowCount(); ++i) {
-                ui->tb_result->insertRow(i);
                 ui->tb_result->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));  // Название фильма
                 ui->tb_result->setItem(i, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));  // Описание фильма
             }
-            ui->tb_result->setHorizontalHeaderLabels({"Название фильма", "Описание фильма"});
         }
     }
 }
+
 
 
 void MainWindow::ScreenDataFromDB(QTableWidget* widget, int typeRequest)

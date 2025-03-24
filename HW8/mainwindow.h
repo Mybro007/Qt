@@ -8,7 +8,7 @@
 #include "dbdata.h"
 #include <QSqlTableModel>
 #include <QSqlQueryModel>
-
+#include <QSqlQuery>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }

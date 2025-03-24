@@ -43,9 +43,7 @@ public:
     void RequestToDB(QString request);
     QSqlError GetLastError(void);
     void ConnectToDataBase(QVector<QString> dataForConnect);
-
-    // Возвращаем экземпляр QSqlDatabase
-    QSqlDatabase getDatabase() const { return *dataBase; }
+    QSqlDatabase getDatabase() const;
 
 signals:
     void sig_SendDataFromDB(QTableWidget *tableWg, int typeR);
