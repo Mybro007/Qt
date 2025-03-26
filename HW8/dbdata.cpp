@@ -1,44 +1,53 @@
 #include "dbdata.h"
-#include "database.h"
 #include "ui_dbdata.h"
+
+// Количество полей для подключения
+const int NUM_CONNECTION_FIELDS = 5;
 
 DbData::DbData(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::DbData)
+    ui(new Ui::DbData),
+    connectionData(NUM_CONNECTION_FIELDS)
 {
     ui->setupUi(this);
-
-    // Устанавливаем захардкоженные данные в поля
-    ui->le_host->setText("981757-ca08998.tmweb.ru");  // hostName
-    ui->le_dbName->setText("netology_cpp");            // dbName
-    ui->le_login->setText("netology_usr_cpp");         // login
-    ui->le_pass->setText("CppNeto3");                  // pass
-    ui->spB_port->setValue(5432);                      // port
-
-    //Ресайзим вектор значений, по количеству полей необходимых для
-    //подключения к БД
-    data.resize(NUM_DATA_FOR_CONNECT_TO_DB);
-
+    setWindowTitle("Параметры подключения");
+    initDefaultValues();
 }
 
 DbData::~DbData()
 {
     delete ui;
 }
-/*!
- * \brief Обработчик кнопки "Ок"
- */
-void DbData::on_buttonBox_accepted()
+
+QVector<QString> DbData::getConnectionData() const
 {
-
-    //Добавляем данные в контейнер и передаем в главное окно
-    data[hostName] = ui->le_host->text();
-    data[dbName] = ui->le_dbName->text();
-    data[login] = ui->le_login->text();
-    data[pass] = ui->le_pass->text();
-    data[port] = ui->spB_port->text();
-
-    emit sig_sendData(data);
-
+    return connectionData;
 }
 
+void DbData::initDefaultValues()
+{
+    // Установка значений по умолчанию
+    ui->le_host->setText("981757-ca08998.tmweb.ru");
+    ui->le_dbName->setText("netology_cpp");
+    ui->le_login->setText("netology_usr_cpp");
+    ui->le_pass->setText("CppNeto3");
+    ui->spB_port->setValue(5432);
+}
+
+void DbData::on_buttonBox_accepted()
+{
+    // Сохранение введенных данных
+    connectionData[0] = ui->le_host->text();
+    connectionData[1] = ui->le_dbName->text();
+    connectionData[2] = ui->le_login->text();
+    connectionData[3] = ui->le_pass->text();
+    connectionData[4] = ui->spB_port->text();
+
+    emit sig_sendData(connectionData);
+    accept();
+}
+
+void DbData::on_buttonBox_rejected()
+{
+    reject();
+}

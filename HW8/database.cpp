@@ -1,58 +1,118 @@
 #include "database.h"
+#include <QDebug>
+#include <QSqlQuery>
 
 DataBase::DataBase(QObject *parent)
-    : QObject{parent}, dataBase(new QSqlDatabase())
+    : QObject(parent),
+    m_connectionName("QT_DB_CONN_" + QString::number(quintptr(this)))
 {
+    m_db = QSqlDatabase::addDatabase("QPSQL", m_connectionName);
 }
 
 DataBase::~DataBase()
 {
-    delete dataBase;
+    disconnectFromDatabase();
+    QSqlDatabase::removeDatabase(m_connectionName);
 }
 
-void DataBase::AddDataBase(QString driver, QString nameDB)
+bool DataBase::connectToDatabase(const QVector<QString>& connectionData)
 {
-    *dataBase = QSqlDatabase::addDatabase(driver, nameDB);
-}
+    if (isConnected()) {
+        return true;
+    }
 
-void DataBase::ConnectToDataBase(QVector<QString> data)
-{
+    QVector<QString> data = connectionData;
     if (data.isEmpty()) {
-        data.push_back("981757-ca08998.tmweb.ru");  // hostName
-        data.push_back("netology_cpp");              // dbName
-        data.push_back("netology_usr_cpp");          // login
-        data.push_back("CppNeto3");                  // pass
-        data.push_back("5432");                      // port
+        data = {
+            "981757-ca08998.tmweb.ru",  // host
+            "netology_cpp",             // db name
+            "netology_usr_cpp",         // login
+            "CppNeto3",                 // password
+            "5432"                      // port
+        };
     }
 
-    dataBase->setHostName(data[hostName]);
-    dataBase->setDatabaseName(data[dbName]);
-    dataBase->setUserName(data[login]);
-    dataBase->setPassword(data[pass]);
-    dataBase->setPort(data[port].toInt());
-
-    bool status = dataBase->open();  // Попытка открыть базу данных
-
-    if (!status) {
-        // Если не удалось открыть базу данных, выведите ошибку
-        qWarning() << "Failed to connect to the database:" << dataBase->lastError().text();
+    if (data.size() < 5) {
+        qWarning() << "Invalid connection data";
+        return false;
     }
 
-    emit sig_SendStatusConnection(status);
+    m_db.setHostName(data[0]);
+    m_db.setDatabaseName(data[1]);
+    m_db.setUserName(data[2]);
+    m_db.setPassword(data[3]);
+    m_db.setPort(data[4].toInt());
+
+    if (!m_db.open()) {
+        qWarning() << "Database connection error:" << m_db.lastError().text();
+        emit connectionStatusChanged(false);
+        return false;
+    }
+
+    emit connectionStatusChanged(true);
+    return true;
 }
 
-void DataBase::DisconnectFromDataBase(QString nameDb)
+void DataBase::disconnectFromDatabase()
 {
-    *dataBase = QSqlDatabase::database(nameDb);
-    dataBase->close();
+    if (m_db.isOpen()) {
+        m_db.close();
+        emit connectionStatusChanged(false);
+    }
 }
 
-QSqlError DataBase::GetLastError()
+bool DataBase::isConnected() const
 {
-    return dataBase->lastError();
+    return m_db.isOpen();
 }
 
-QSqlDatabase DataBase::getDatabase() const
+bool DataBase::executeQuery(const QString& query, QVector<QVector<QVariant>>* result)
 {
-    return *dataBase;
+    if (!isConnected()) {
+        qWarning() << "Query execution failed: database not connected";
+        return false;
+    }
+
+    QSqlQuery sqlQuery(m_db);
+    if (!sqlQuery.exec(query)) {
+        qWarning() << "Query failed:" << sqlQuery.lastError().text();
+        qWarning() << "Failed query:" << query;
+        return false;
+    }
+
+    if (result) {
+        result->clear();
+        while (sqlQuery.next()) {
+            QVector<QVariant> row;
+            for (int i = 0; i < sqlQuery.record().count(); ++i) {
+                row.append(sqlQuery.value(i));
+            }
+            result->append(row);
+        }
+    }
+
+    return true;
+}
+
+bool DataBase::beginTransaction()
+{
+    if (!isConnected()) return false;
+    return m_db.transaction();
+}
+
+bool DataBase::commitTransaction()
+{
+    if (!isConnected()) return false;
+    return m_db.commit();
+}
+
+bool DataBase::rollbackTransaction()
+{
+    if (!isConnected()) return false;
+    return m_db.rollback();
+}
+
+QSqlError DataBase::lastError() const
+{
+    return m_db.lastError();
 }

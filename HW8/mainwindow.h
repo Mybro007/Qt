@@ -2,13 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QMessageBox>
-#include <QtConcurrent>
 #include "database.h"
 #include "dbdata.h"
-#include <QSqlTableModel>
-#include <QSqlQueryModel>
-#include <QSqlQuery>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -22,35 +17,18 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-
-public slots:
-    void ScreenDataFromDB(QTableWidget *widget, int typeRequest);
-    void ReceiveStatusConnectionToDB(bool status);
-
-
 private slots:
-    void on_act_addData_triggered();
-    void on_act_connect_triggered();
-    void on_pb_request_clicked();
-    void on_pb_clear_clicked();
-
-
-signals:
-    void sig_RequestToDb(QString request);
+    void onActAddDataTriggered();
+    void onActConnectTriggered();
+    void onPbRequestClicked();
+    void onPbClearClicked();
+    void onDatabaseDataReceived(QVector<QString> dbData);
+    void onConnectionStatusChanged(bool connected);
 
 private:
-
-    QVector<QString> dataForConnect; //Данные для подключения к БД.
-
     Ui::MainWindow *ui;
     DbData *dataDb;
-    DataBase* dataBase;
-    QMessageBox* msg;
-
-    QString request = "SELECT title, release_year, c.name  FROM film f "
-                      "JOIN film_category fc on f.film_id = fc.film_id "
-                      "JOIN category c on c.category_id  = fc.category_id";
-
-
+    DataBase *dataBase;
 };
+
 #endif // MAINWINDOW_H

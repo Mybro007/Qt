@@ -1,200 +1,117 @@
 #include "mainwindow.h"
-#include "./ui_mainwindow.h"
+#include "ui_mainwindow.h"
+#include "dbdata.h"
+#include <QMessageBox>
+#include <QSqlQuery>
+#include <QSqlError>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , dataDb(new DbData(this))
+    , dataBase(new DataBase(this))
 {
     ui->setupUi(this);
+
+    // Настройка интерфейса
     ui->lb_statusConnect->setStyleSheet("color:red");
     ui->pb_request->setEnabled(false);
+    ui->tb_result->setColumnCount(2);
+    ui->tb_result->setHorizontalHeaderLabels({"Название фильма", "Год выпуска"});
 
-    dataDb = new DbData(this);
-    dataBase = new DataBase(this);
-    msg = new QMessageBox(this);
+    // Подключение сигналов и слотов
+    connect(dataDb, &DbData::sig_sendData, this, &MainWindow::onDatabaseDataReceived);
+    connect(dataBase, &DataBase::connectionStatusChanged, this, &MainWindow::onConnectionStatusChanged);
+    connect(ui->act_connect, &QAction::triggered, this, &MainWindow::onActConnectTriggered);
+    connect(ui->act_addData, &QAction::triggered, this, &MainWindow::onActAddDataTriggered);
+    connect(ui->pb_request, &QPushButton::clicked, this, &MainWindow::onPbRequestClicked);
+    connect(ui->pb_clear, &QPushButton::clicked, this, &MainWindow::onPbClearClicked);
 
-    dataForConnect.resize(NUM_DATA_FOR_CONNECT_TO_DB);
-
-    dataBase->AddDataBase(POSTGRE_DRIVER, DB_NAME);
-
-    connect(dataDb, &DbData::sig_sendData, this, [&](QVector<QString> receivData){
-        dataForConnect = receivData;
-    });
-
-    connect(dataBase, &DataBase::sig_SendDataFromDB, this, &MainWindow::ScreenDataFromDB);
-    connect(dataBase, &DataBase::sig_SendStatusConnection, this, &MainWindow::ReceiveStatusConnectionToDB);
+    // Инициализация базы данных
+    dataBase->connectToDatabase();
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+    delete dataDb;
+    delete dataBase;
 }
 
-void MainWindow::on_act_addData_triggered()
+void MainWindow::onActAddDataTriggered()
 {
-    //Отобразим диалоговое окно. Какой метод нужно использовать?
     dataDb->show();
 }
 
-void MainWindow::on_pb_clear_clicked()
+void MainWindow::onActConnectTriggered()
 {
-    ui->tb_result->clearContents(); // Очистить содержимое
-    ui->tb_result->setRowCount(0);  // Удалить все строки
-}
-
-void MainWindow::on_act_connect_triggered()
-{
-    /*
-     * Обработчик кнопки у нас должен подключаться и отключаться от БД.
-     * Можно привязаться к надписи лейбла статуса. Если он равен
-     * "Отключено" мы осуществляем подключение, если "Подключено" то
-     * отключаемся
-    */
-
-    if(ui->lb_statusConnect->text() == "Отключено"){
-
-        ui->lb_statusConnect->setText("Подключение");
-        ui->lb_statusConnect->setStyleSheet("color : black");
-
-        // Лямбда-функция для подключения
-        auto conn = [&]{
-            // Подключаемся с захардкоженными данными
-            dataBase->ConnectToDataBase(dataForConnect);
-        };
-        QtConcurrent::run(conn);  // Выполняем подключение в отдельном потоке
-
-    }
-    else{
-        dataBase->DisconnectFromDataBase(DB_NAME);
-        ui->lb_statusConnect->setText("Отключено");
-        ui->act_connect->setText("Подключиться");
-        ui->lb_statusConnect->setStyleSheet("color:red");
-        ui->pb_request->setEnabled(false);
+    if (dataBase->isConnected()) {
+        dataBase->disconnectFromDatabase();
+    } else {
+        dataBase->connectToDatabase();
     }
 }
 
-void MainWindow::on_pb_request_clicked()
+void MainWindow::onPbRequestClicked()
 {
-    ui->tb_result->clearContents();  // Очистить содержимое
-    ui->tb_result->setRowCount(0);   // Удалить все строки
-
-    // Проверяем, что база данных открыта
-    if (!dataBase->getDatabase().isOpen()) {
-        qWarning() << "Database is not open. Cannot execute the query.";
+    if (!dataBase->isConnected()) {
+        QMessageBox::warning(this, "Ошибка", "Нет подключения к базе данных");
         return;
     }
 
-    if (ui->cb_category->currentText() == "Все") {
-        QSqlTableModel* model = new QSqlTableModel(this);
-        model->setTable("film"); // Используем таблицу "film"
-        model->setEditStrategy(QSqlTableModel::OnManualSubmit);  // Стратегия редактирования
-        model->setQuery("SELECT title, description FROM film");  // Запрос для всех фильмов
+    QString category = ui->cb_category->currentText();
+    QString query;
 
-        // Установим заголовки столбцов
-        model->setHeaderData(0, Qt::Horizontal, "Название фильма");
-        model->setHeaderData(1, Qt::Horizontal, "Описание фильма");
-
-        // Связываем модель с таблицей на форме
-        if (model->rowCount() > 0) {
-            ui->tb_result->setRowCount(model->rowCount());
-            for (int i = 0; i < model->rowCount(); ++i) {
-                ui->tb_result->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));  // Название фильма
-                ui->tb_result->setItem(i, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));  // Описание фильма
-            }
-        }
+    if (category == "Все") {
+        query = "SELECT title, release_year FROM film";
+    } else if (category == "Комедия") {
+        query = "SELECT f.title, f.release_year FROM film f "
+                "JOIN film_category fc ON f.film_id = fc.film_id "
+                "JOIN category c ON c.category_id = fc.category_id "
+                "WHERE c.name = 'Comedy'";
+    } else if (category == "Ужасы") {
+        query = "SELECT f.title, f.release_year FROM film f "
+                "JOIN film_category fc ON f.film_id = fc.film_id "
+                "JOIN category c ON c.category_id = fc.category_id "
+                "WHERE c.name = 'Horror'";
     }
-    else if (ui->cb_category->currentText() == "Комедия" || ui->cb_category->currentText() == "Ужасы") {
-        QString category = ui->cb_category->currentText();
-        QSqlQueryModel* model = new QSqlQueryModel(this);
 
-        QString queryStr = QString(
-                               "SELECT f.title, f.description "
-                               "FROM film f "
-                               "JOIN film_category fc ON f.film_id = fc.film_id "
-                               "JOIN category c ON c.category_id = fc.category_id "
-                               "WHERE c.name = '%1'").arg(category);
-
-        model->setQuery(queryStr);  // Запрос для категории (комедия или ужасы)
-
-        // Установим заголовки столбцов
-        model->setHeaderData(0, Qt::Horizontal, "Название фильма");
-        model->setHeaderData(1, Qt::Horizontal, "Описание фильма");
-
-        // Связываем модель с таблицей на форме
-        if (model->rowCount() > 0) {
-            ui->tb_result->setRowCount(model->rowCount());
-            for (int i = 0; i < model->rowCount(); ++i) {
-                ui->tb_result->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));  // Название фильма
-                ui->tb_result->setItem(i, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));  // Описание фильма
-            }
+    QVector<QVector<QVariant>> results;
+    if (dataBase->executeQuery(query, &results)) {
+        ui->tb_result->setRowCount(results.size());
+        for (int i = 0; i < results.size(); ++i) {
+            const auto& row = results[i];
+            ui->tb_result->setItem(i, 0, new QTableWidgetItem(row[0].toString()));
+            ui->tb_result->setItem(i, 1, new QTableWidgetItem(row[1].toString()));
         }
+    } else {
+        QMessageBox::critical(this, "Ошибка запроса", dataBase->lastError().text());
     }
 }
 
-
-
-void MainWindow::ScreenDataFromDB(QTableWidget* widget, int typeRequest)
+void MainWindow::onPbClearClicked()
 {
-    widget->clearContents();
-    widget->setRowCount(0);
-
-    if (typeRequest == requestAllFilms) {
-        // Используем QSqlTableModel, создаём модель и подключаем к базе данных
-        QSqlTableModel* model = new QSqlTableModel(this);
-        model->setTable("film");
-        model->setEditStrategy(QSqlTableModel::OnManualSubmit);
-        model->setQuery("SELECT title, description FROM film");  // Выполнение запроса
-
-        if (model->rowCount() > 0) {
-            for (int i = 0; i < model->rowCount(); ++i) {
-                widget->insertRow(i);
-                widget->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));  // Название фильма
-                widget->setItem(i, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));  // Описание фильма
-            }
-            widget->setHorizontalHeaderLabels({"Название фильма", "Описание фильма"});
-        }
-    }
-    else if (typeRequest == requestComedy || typeRequest == requestHorrors) {
-        // Используем QSqlQueryModel для выполнения запроса
-        QSqlQueryModel* model = new QSqlQueryModel(this);
-        QString category = (typeRequest == requestComedy) ? "Comedy" : "Horror";
-        QString queryStr = QString(
-                               "SELECT f.title, f.description "
-                               "FROM film f "
-                               "JOIN film_category fc ON f.film_id = fc.film_id "
-                               "JOIN category c ON c.category_id = fc.category_id "
-                               "WHERE c.name = '%1'").arg(category);
-
-        model->setQuery(queryStr);  // Выполнение запроса
-
-        if (model->rowCount() > 0) {
-            for (int i = 0; i < model->rowCount(); ++i) {
-                widget->insertRow(i);
-                widget->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));  // Название фильма
-                widget->setItem(i, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));  // Описание фильма
-            }
-            widget->setHorizontalHeaderLabels({"Название фильма", "Описание фильма"});
-        }
-    }
+    ui->tb_result->clearContents();
+    ui->tb_result->setRowCount(0);
 }
 
-void MainWindow::ReceiveStatusConnectionToDB(bool status)
+void MainWindow::onDatabaseDataReceived(QVector<QString> dbData)
 {
-    if (status) {
-        ui->act_connect->setText("Отключиться");
-        ui->lb_statusConnect->setText("Подключено к БД");
+    // Здесь можно сохранить данные для подключения
+    Q_UNUSED(dbData);
+}
+
+void MainWindow::onConnectionStatusChanged(bool connected)
+{
+    if (connected) {
+        ui->lb_statusConnect->setText("Подключено");
         ui->lb_statusConnect->setStyleSheet("color:green");
+        ui->act_connect->setText("Отключиться");
         ui->pb_request->setEnabled(true);
-    }
-    else {
-        dataBase->DisconnectFromDataBase(DB_NAME);
-        msg->setIcon(QMessageBox::Critical);
-        msg->setText(dataBase->GetLastError().text());
+    } else {
         ui->lb_statusConnect->setText("Отключено");
         ui->lb_statusConnect->setStyleSheet("color:red");
-        msg->exec();
+        ui->act_connect->setText("Подключиться");
+        ui->pb_request->setEnabled(false);
     }
 }
-
-
-

@@ -25,13 +25,14 @@ set(PROJECT_SOURCES
         mainwindow.ui
         database.h
         database.cpp
-        dbdata.h
-        dbdata.cpp
+        dbmanager.h
+        dbmanager.cpp
         dbdata.ui
 )
 
 add_executable(HW8
         ${PROJECT_SOURCES}
+        dbdata.h dbdata.cpp
 )
 
 # Добавьте библиотеки (не указывая полный путь, только имя)

@@ -2,6 +2,7 @@
 #define DBDATA_H
 
 #include <QDialog>
+#include <QVector>
 
 namespace Ui {
 class DbData;
@@ -15,18 +16,22 @@ public:
     explicit DbData(QWidget *parent = nullptr);
     ~DbData();
 
+    // Получение введенных данных
+    QVector<QString> getConnectionData() const;
 
- signals:
+signals:
     void sig_sendData(QVector<QString> dbData);
-
 
 private slots:
     void on_buttonBox_accepted();
+    void on_buttonBox_rejected();
 
 private:
     Ui::DbData *ui;
-    QVector<QString> data;
+    QVector<QString> connectionData;
 
+    // Инициализация полей значениями по умолчанию
+    void initDefaultValues();
 };
 
 #endif // DBDATA_H

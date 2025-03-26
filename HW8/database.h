@@ -1,34 +1,13 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
-#include <QTableWidget>
 #include <QObject>
 #include <QSqlDatabase>
 #include <QSqlError>
-#include <QSqlQueryModel>
-#include <QSqlTableModel>
-
-#define POSTGRE_DRIVER "QPSQL"
-#define DB_NAME "MyDB"
-
-// Количество полей данных необходимых для подключения к БД
-#define NUM_DATA_FOR_CONNECT_TO_DB 5
-
-// Перечисление полей данных
-enum fieldsForConnect{
-    hostName = 0,
-    dbName = 1,
-    login = 2,
-    pass = 3,
-    port = 4
-};
-
-// Типы запросов
-enum requestType{
-    requestAllFilms = 1,
-    requestComedy   = 2,
-    requestHorrors  = 3
-};
+#include <QVector>
+#include <QString>
+#include <QVariant>
+#include <QSqlRecord>
 
 class DataBase : public QObject
 {
@@ -38,19 +17,26 @@ public:
     explicit DataBase(QObject *parent = nullptr);
     ~DataBase();
 
-    void AddDataBase(QString driver, QString nameDB = "");
-    void DisconnectFromDataBase(QString nameDb = "");
-    void RequestToDB(QString request);
-    QSqlError GetLastError(void);
-    void ConnectToDataBase(QVector<QString> dataForConnect);
-    QSqlDatabase getDatabase() const;
+    // Управление подключением
+    bool connectToDatabase(const QVector<QString>& connectionData = {});
+    void disconnectFromDatabase();
+    bool isConnected() const;
+
+    // Выполнение запросов
+    bool executeQuery(const QString& query, QVector<QVector<QVariant>>* result = nullptr);
+    QSqlError lastError() const;
+
+    // Управление транзакциями
+    bool beginTransaction();
+    bool commitTransaction();
+    bool rollbackTransaction();
 
 signals:
-    void sig_SendDataFromDB(QTableWidget *tableWg, int typeR);
-    void sig_SendStatusConnection(bool);
+    void connectionStatusChanged(bool connected);
 
 private:
-    QSqlDatabase* dataBase;
+    QSqlDatabase m_db;
+    QString m_connectionName;
 };
 
 #endif // DATABASE_H
