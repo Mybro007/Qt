@@ -8,6 +8,8 @@
 #include <QString>
 #include <QVariant>
 #include <QSqlRecord>
+#include <QSqlQueryModel>
+#include <QSqlTableModel>
 
 class DataBase : public QObject
 {
@@ -25,6 +27,9 @@ public:
     // Выполнение запросов
     bool executeQuery(const QString& query, QVector<QVector<QVariant>>* result = nullptr);
     QSqlError lastError() const;
+
+    QSqlTableModel* getTableModel(const QString& tableName, QObject* parent = nullptr);
+    QSqlQueryModel* getQueryModel(const QString& query, QObject* parent = nullptr);
 
     // Управление транзакциями
     bool beginTransaction();

@@ -116,3 +116,37 @@ QSqlError DataBase::lastError() const
 {
     return m_db.lastError();
 }
+
+QSqlTableModel* DataBase::getTableModel(const QString& tableName, QObject* parent)
+{
+    if (!isConnected()) {
+        qWarning() << "Database not connected!";
+        return nullptr;
+    }
+
+    QSqlTableModel* model = new QSqlTableModel(parent, m_db);
+    model->setTable(tableName);
+    model->setEditStrategy(QSqlTableModel::OnManualSubmit);
+    model->select();
+
+    return model;
+}
+
+QSqlQueryModel* DataBase::getQueryModel(const QString& query, QObject* parent)
+{
+    if (!isConnected()) {
+        qWarning() << "Database not connected!";
+        return nullptr;
+    }
+
+    QSqlQueryModel* model = new QSqlQueryModel(parent);
+    model->setQuery(query, m_db);
+
+    if (model->lastError().isValid()) {
+        qWarning() << "Query error:" << model->lastError().text();
+        delete model;
+        return nullptr;
+    }
+
+    return model;
+}
