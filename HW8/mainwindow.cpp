@@ -26,7 +26,7 @@ MainWindow::MainWindow(QWidget *parent)
     // Инициализация модели (временно пустая)
     QStandardItemModel *initModel = new QStandardItemModel(0, 2, this); // 0 строк, 2 столбца
     initModel->setHeaderData(0, Qt::Horizontal, "Название фильма");
-    initModel->setHeaderData(1, Qt::Horizontal, "Год выпуска");
+    initModel->setHeaderData(1, Qt::Horizontal, "Описание фильма");
     ui->tb_result->setModel(initModel);
 
     // Настройка внешнего вида таблицы
@@ -48,26 +48,27 @@ MainWindow::MainWindow(QWidget *parent)
 
 void MainWindow::handleClearRequest()
 {
-    if (QSqlQueryModel* model = qobject_cast<QSqlQueryModel*>(ui->tb_result->model())) {
-        model->setQuery(""); // Очищаем SQL модель
+    QAbstractItemModel* model = ui->tb_result->model();
+    if (!model) return;
+
+    if (auto sqlModel = qobject_cast<QSqlQueryModel*>(model)) {
+        sqlModel->setQuery(""); // Очищаем запрос
     }
-    else if (QStandardItemModel* model = qobject_cast<QStandardItemModel*>(ui->tb_result->model())) {
-        model->clear(); // Очищаем стандартную модель
+    else if (auto stdModel = qobject_cast<QStandardItemModel*>(model)) {
+        stdModel->clear();
     }
 
-    // Восстанавливаем заголовки
-    if (auto model = ui->tb_result->model()) {
-        model->setHeaderData(0, Qt::Horizontal, "Название фильма");
-        model->setHeaderData(1, Qt::Horizontal, "Год выпуска");
-    }
+    // Инициализируем модель с нужными заголовками
+    initTableView();
 }
 
 void MainWindow::initTableView()
 {
     QStandardItemModel* model = new QStandardItemModel(0, 2, this);
     model->setHeaderData(0, Qt::Horizontal, "Название фильма");
-    model->setHeaderData(1, Qt::Horizontal, "Год выпуска");
+    model->setHeaderData(1, Qt::Horizontal, "Описание фильма");
     ui->tb_result->setModel(model);
+    ui->tb_result->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 }
 
 MainWindow::~MainWindow()
@@ -112,12 +113,11 @@ void MainWindow::onPbRequestClicked()
     QString category = ui->cb_category->currentText();
 
     if (category == "Все") {
-        // Используем QSqlTableModel
-        currentTableModel = dataBase->getTableModel("film", this);
-        if (currentTableModel) {
-            currentTableModel->setHeaderData(0, Qt::Horizontal, "Название");
-            currentTableModel->setHeaderData(1, Qt::Horizontal, "Год выпуска");
-            ui->tb_result->setModel(currentTableModel);
+        // Используем QSqlQueryModel вместо QSqlTableModel, чтобы точно контролировать столбцы
+        QString query = "SELECT title AS \"Название фильма\", description AS \"Описание фильма\" FROM film";
+        currentQueryModel = dataBase->getQueryModel(query, this);
+        if (currentQueryModel) {
+            ui->tb_result->setModel(currentQueryModel);
 
             // Настраиваем внешний вид
             ui->tb_result->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -125,8 +125,9 @@ void MainWindow::onPbRequestClicked()
         }
     }
     else {
-        // Используем QSqlQueryModel
-        QString query = QString("SELECT title, release_year FROM film f "
+        // Используем QSqlQueryModel для фильмов по категории
+        QString query = QString("SELECT title AS \"Название фильма\", description AS \"Описание фильма\" "
+                                "FROM film f "
                                 "JOIN film_category fc ON f.film_id = fc.film_id "
                                 "JOIN category c ON c.category_id = fc.category_id "
                                 "WHERE c.name = '%1'")
@@ -134,8 +135,6 @@ void MainWindow::onPbRequestClicked()
 
         currentQueryModel = dataBase->getQueryModel(query, this);
         if (currentQueryModel) {
-            currentQueryModel->setHeaderData(0, Qt::Horizontal, "Название");
-            currentQueryModel->setHeaderData(1, Qt::Horizontal, "Год выпуска");
             ui->tb_result->setModel(currentQueryModel);
 
             // Настраиваем внешний вид

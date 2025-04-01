@@ -24,7 +24,7 @@ bool DbManager::isConnected() const
 QVector<QVector<QVariant>> DbManager::getAllFilms()
 {
     QVector<QVector<QVariant>> result;
-    QString query = "SELECT f.title, f.release_year, c.name "
+    QString query = "SELECT f.title, f.description "
                     "FROM film f "
                     "JOIN film_category fc ON f.film_id = fc.film_id "
                     "JOIN category c ON c.category_id = fc.category_id";
@@ -38,7 +38,7 @@ QVector<QVector<QVariant>> DbManager::getAllFilms()
 QVector<QVector<QVariant>> DbManager::getFilmsByCategory(const QString& category)
 {
     QVector<QVector<QVariant>> result;
-    QString query = QString("SELECT f.title, f.release_year FROM film f "
+    QString query = QString("SELECT f.title, f.description FROM film f "
                             "JOIN film_category fc ON f.film_id = fc.film_id "
                             "JOIN category c ON c.category_id = fc.category_id "
                             "WHERE c.name = '%1'").arg(category);
